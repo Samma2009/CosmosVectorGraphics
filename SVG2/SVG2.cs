@@ -1,4 +1,4 @@
-﻿using Cosmos.Core.Memory;
+using Cosmos.Core.Memory;
 using Cosmos.System.Graphics;
 using cosmosVectorGraphics;
 using HtmlAgilityPack;
@@ -52,10 +52,10 @@ namespace CSVG.SVG2
                     Canvas = new Bitmap((uint)(int.Parse(attribs["width"]) * ZoomFactor) + 5, (uint)(int.Parse(attribs["height"]) * ZoomFactor) + 5, ColorDepth.ColorDepth32);
                     break;
                 case "circle":
-                    Canvas.DrawCircle(int.Parse(attribs["cx"]), int.Parse(attribs["cy"]), int.Parse(attribs["r"]), Color.FromName(attribs["fill"]));
+                    Canvas.DrawCircle(int.Parse(attribs["cx"]), int.Parse(attribs["cy"]), int.Parse(attribs["r"]), ProcessColor(attribs["fill"]));
                     break;
                 case "ellipse":
-                    Canvas.DrawFilledEllipse(int.Parse(attribs["cx"]), int.Parse(attribs["cy"]), int.Parse(attribs["rx"]), int.Parse(attribs["ry"]), Color.FromName(attribs["fill"]));
+                    Canvas.DrawFilledEllipse(int.Parse(attribs["cx"]), int.Parse(attribs["cy"]), int.Parse(attribs["rx"]), int.Parse(attribs["ry"]), ProcessColor(attribs["fill"]));
                     break;
                 case "path":
                     Point Prev = new Point();
@@ -117,30 +117,30 @@ namespace CSVG.SVG2
                                 Prev.Y += Params[1];
                                 break;
                             case 'l':
-                                Canvas.DrawLine2(Color.FromName(attribs["fill"]), Prev.X, Prev.Y, Prev.X+Params[0], Prev.Y+Params[1]);
+                                Canvas.DrawLine2(ProcessColor(attribs["fill"]), Prev.X, Prev.Y, Prev.X+Params[0], Prev.Y+Params[1]);
                                 Prev.X += Params[0];
                                 Prev.Y += Params[1];
                                 break;
                             case 'c':
-                                Canvas.DrawBezierCurve(Prev, Prev.X+Params[0], Prev.Y + Params[1], Prev.X + Params[2], Prev.Y + Params[3], Prev.X + Params[4], Prev.Y + Params[5], Color.FromName(attribs["fill"]));
+                                Canvas.DrawBezierCurve(Prev, Prev.X+Params[0], Prev.Y + Params[1], Prev.X + Params[2], Prev.Y + Params[3], Prev.X + Params[4], Prev.Y + Params[5], ProcessColor(attribs["fill"]));
                                 Prev.X += Params[4];
                                 Prev.Y += Params[5];
                                 break;
                             case 'q':
-                                Canvas.DrawBezierCurve(Prev, Prev.X + Params[0], Prev.Y + Params[1], Prev.X + Params[2], Prev.Y + Params[3], Color.FromName(attribs["fill"]));
+                                Canvas.DrawBezierCurve(Prev, Prev.X + Params[0], Prev.Y + Params[1], Prev.X + Params[2], Prev.Y + Params[3], ProcessColor(attribs["fill"]));
                                 Prev.X += Params[2];
                                 Prev.Y += Params[3];
                                 break;
                             case 'h':
-                                Canvas.DrawLine2(Color.FromName(attribs["fill"]), Prev.X, Prev.Y, Prev.X+Params[0], Prev.Y);
+                                Canvas.DrawLine2(ProcessColor(attribs["fill"]), Prev.X, Prev.Y, Prev.X+Params[0], Prev.Y);
                                 Prev.X += Params[0];
                                 break;
                             case 'v':
-                                Canvas.DrawLine2(Color.FromName(attribs["fill"]), Prev.X, Prev.Y, Prev.X, Prev.Y+Params[0]);
+                                Canvas.DrawLine2(ProcessColor(attribs["fill"]), Prev.X, Prev.Y, Prev.X, Prev.Y+Params[0]);
                                 Prev.Y += Params[0];
                                 break;
                             case 'z':
-                                Canvas.DrawLine(Color.FromName(attribs["fill"]), Prev.X, Prev.Y, First.X, First.Y);
+                                Canvas.DrawLine(ProcessColor(attribs["fill"]), Prev.X, Prev.Y, First.X, First.Y);
                                 break;
                             default:
                                 break;
@@ -161,5 +161,44 @@ namespace CSVG.SVG2
                 RecursiveRender(nodes, ZoomFactor);
             }
         }
+
+        Color ProcessColor(string col)
+        {
+            try
+            {
+                return Color.FromName(col);
+            }
+            catch
+            {
+                try
+                {
+                    return HexToColor(col);
+                }
+                catch
+                {
+                    return Color.Black;
+                }
+                
+            }
+        }
+        Color HexToColor(string hexColor)
+        {
+            if (hexColor.StartsWith("#"))
+                hexColor = hexColor.Substring(1);
+
+            if (hexColor.Length == 6)
+                hexColor = "FF" + hexColor; // Add alpha if not present
+
+            if (hexColor.Length != 8)
+                throw new ArgumentException("Invalid hex color. Hex color must be in ARGB format (8 characters).");
+
+            int a = Convert.ToInt32(hexColor.Substring(0, 2), 16);
+            int r = Convert.ToInt32(hexColor.Substring(2, 2), 16);
+            int g = Convert.ToInt32(hexColor.Substring(4, 2), 16);
+            int b = Convert.ToInt32(hexColor.Substring(6, 2), 16);
+
+            return Color.FromArgb(a, r, g, b);
+        }
+
     }
 }
