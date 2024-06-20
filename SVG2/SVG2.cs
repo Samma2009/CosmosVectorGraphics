@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -58,10 +59,12 @@ namespace CSVG.SVG2
                     Canvas.DrawFilledEllipse(int.Parse(attribs["cx"]), int.Parse(attribs["cy"]), int.Parse(attribs["rx"]), int.Parse(attribs["ry"]), ProcessColor(attribs["fill"]));
                     break;
                 case "path":
+                    var PathBuffer = new Bitmap(Canvas.Width, Canvas.Height,ColorDepth.ColorDepth32); 
                     Point Prev = new Point();
                     Point First = new Point();
                     string[] path = attribs["d"].Split(" ",StringSplitOptions.RemoveEmptyEntries);
                     bool first = true;
+                    PathBuffer.Clear(ProcessColor(attribs["fill"]));
                     foreach (var item in path)
                     {
                         string[] ParamsRaw = item.Split(",", StringSplitOptions.RemoveEmptyEntries);
@@ -84,30 +87,30 @@ namespace CSVG.SVG2
                                 Prev.Y = Params[1];
                                 break;
                             case 'L':
-                                Canvas.DrawLine2(Color.Transparent, Prev.X, Prev.Y, Params[0], Params[1]);
+                                PathBuffer.DrawLine2(Color.Transparent, Prev.X, Prev.Y, Params[0], Params[1]);
                                 Prev.X = Params[0];
                                 Prev.Y = Params[1];
                                 break;
                             case 'H':
-                                Canvas.DrawLine2(Color.Transparent, Prev.X, Prev.Y, Params[0], Prev.Y);
+                                PathBuffer.DrawLine2(Color.Transparent, Prev.X, Prev.Y, Params[0], Prev.Y);
                                 Prev.X = Params[0];
                                 break;
                             case 'V':
-                                Canvas.DrawLine2(Color.Transparent, Prev.X, Prev.Y, Prev.X, Params[0]);
+                                PathBuffer.DrawLine2(Color.Transparent, Prev.X, Prev.Y, Prev.X, Params[0]);
                                 Prev.Y = Params[0];
                                 break;
                             case 'C':
-                                Canvas.DrawBezierCurve(Prev, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], Color.Transparent);
+                                PathBuffer.DrawBezierCurve(Prev, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], Color.Transparent);
                                 Prev.X = Params[4];
                                 Prev.Y = Params[5];
                                 break;
                             case 'Q':
-                                Canvas.DrawBezierCurve(Prev, Params[0], Params[1], Params[2], Params[3], Color.Transparent);
+                                PathBuffer.DrawBezierCurve(Prev, Params[0], Params[1], Params[2], Params[3], Color.Transparent);
                                 Prev.X = Params[2];
                                 Prev.Y = Params[3];
                                 break;
                             case 'Z':
-                                Canvas.DrawLine(Color.Transparent, Prev.X, Prev.Y, First.X, First.Y);
+                                PathBuffer.DrawLine2(Color.Transparent, Prev.X, Prev.Y, First.X, First.Y);
                                 break;
 
 
@@ -117,30 +120,30 @@ namespace CSVG.SVG2
                                 Prev.Y += Params[1];
                                 break;
                             case 'l':
-                                Canvas.DrawLine2(ProcessColor(attribs["fill"]), Prev.X, Prev.Y, Prev.X+Params[0], Prev.Y+Params[1]);
+                                PathBuffer.DrawLine2(Color.Transparent, Prev.X, Prev.Y, Prev.X+Params[0], Prev.Y+Params[1]);
                                 Prev.X += Params[0];
                                 Prev.Y += Params[1];
                                 break;
                             case 'c':
-                                Canvas.DrawBezierCurve(Prev, Prev.X+Params[0], Prev.Y + Params[1], Prev.X + Params[2], Prev.Y + Params[3], Prev.X + Params[4], Prev.Y + Params[5], ProcessColor(attribs["fill"]));
+                                PathBuffer.DrawBezierCurve(Prev, Prev.X+Params[0], Prev.Y + Params[1], Prev.X + Params[2], Prev.Y + Params[3], Prev.X + Params[4], Prev.Y + Params[5], Color.Transparent);
                                 Prev.X += Params[4];
                                 Prev.Y += Params[5];
                                 break;
                             case 'q':
-                                Canvas.DrawBezierCurve(Prev, Prev.X + Params[0], Prev.Y + Params[1], Prev.X + Params[2], Prev.Y + Params[3], ProcessColor(attribs["fill"]));
+                                PathBuffer.DrawBezierCurve(Prev, Prev.X + Params[0], Prev.Y + Params[1], Prev.X + Params[2], Prev.Y + Params[3], Color.Transparent);
                                 Prev.X += Params[2];
                                 Prev.Y += Params[3];
                                 break;
                             case 'h':
-                                Canvas.DrawLine2(ProcessColor(attribs["fill"]), Prev.X, Prev.Y, Prev.X+Params[0], Prev.Y);
+                                PathBuffer.DrawLine2(Color.Transparent, Prev.X, Prev.Y, Prev.X+Params[0], Prev.Y);
                                 Prev.X += Params[0];
                                 break;
                             case 'v':
-                                Canvas.DrawLine2(ProcessColor(attribs["fill"]), Prev.X, Prev.Y, Prev.X, Prev.Y+Params[0]);
+                                PathBuffer.DrawLine2(Color.Transparent, Prev.X, Prev.Y, Prev.X, Prev.Y+Params[0]);
                                 Prev.Y += Params[0];
                                 break;
                             case 'z':
-                                Canvas.DrawLine(ProcessColor(attribs["fill"]), Prev.X, Prev.Y, First.X, First.Y);
+                                PathBuffer.DrawLine2(Color.Transparent, Prev.X, Prev.Y, First.X, First.Y);
                                 break;
                             default:
                                 break;
@@ -153,6 +156,10 @@ namespace CSVG.SVG2
                             First.Y = Prev.Y;
                         }
                     }
+
+                    flood(PathBuffer,new(10,10), ProcessColor(attribs["fill"]), Color.Transparent);
+
+                    Canvas.DrawImageAlpha(PathBuffer,0,0);
                     break;
             }
 
@@ -161,6 +168,31 @@ namespace CSVG.SVG2
                 RecursiveRender(nodes, ZoomFactor);
             }
         }
+        void flood(Bitmap buffer,Point pos, Color target, Color substitution)
+        {
+            List<Point> list = new List<Point>();
+            list.Add(pos);
+
+            for (int i = 0; i < list.Count; i++)
+            {
+                Point currentPos = list[i];
+
+                if (buffer.GetPointColor((int)currentPos.X, (int)currentPos.Y) == target)
+                {
+                    buffer.SetPixel(substitution,currentPos.X,currentPos.Y);
+
+                    if (currentPos.X + 1 < buffer.Width)
+                        list.Add(new Point(currentPos.X + 1, currentPos.Y));
+                    if (currentPos.X - 1 >= 0)
+                        list.Add(new Point(currentPos.X - 1, currentPos.Y));
+                    if (currentPos.Y + 1 < buffer.Height)
+                        list.Add(new Point(currentPos.X, currentPos.Y + 1));
+                    if (currentPos.Y - 1 >= 0)
+                        list.Add(new Point(currentPos.X, currentPos.Y - 1));
+                }
+            }
+        }
+
 
         Color ProcessColor(string col)
         {
